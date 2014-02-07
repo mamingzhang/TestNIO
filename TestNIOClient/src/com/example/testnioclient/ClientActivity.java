@@ -2,6 +2,7 @@ package com.example.testnioclient;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.Editable;
@@ -12,12 +13,17 @@ import android.util.SparseIntArray;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.View.OnFocusChangeListener;
+import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.RemoteViews.ActionException;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
 public class ClientActivity extends Activity implements OnClickListener,
-		TextWatcher, OnEditorActionListener
+		TextWatcher, OnEditorActionListener, OnFocusChangeListener
 {
 	private SparseArray<ClientThread> mClientThreadAry = new SparseArray<ClientThread>();
 	private int mClientCount = 0;
@@ -25,6 +31,8 @@ public class ClientActivity extends Activity implements OnClickListener,
 	private EditText mEditText = null;
 	private TextView mTextView = null;
 
+	private InputMethodManager mInputMethodManager;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
@@ -32,6 +40,9 @@ public class ClientActivity extends Activity implements OnClickListener,
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.client_main);
 
+		mInputMethodManager = (InputMethodManager)
+                getSystemService(Context.INPUT_METHOD_SERVICE);
+		
 		findViewById(R.id.startClient).setOnClickListener(this);
 		findViewById(R.id.stopClient).setOnClickListener(this);
 		findViewById(R.id.sendToServer).setOnClickListener(this);
@@ -42,11 +53,15 @@ public class ClientActivity extends Activity implements OnClickListener,
 		mEditText = (EditText) findViewById(R.id.editTxt);
 		mEditText.addTextChangedListener(this);
 		mEditText.setOnEditorActionListener(this);
+		mEditText.setOnFocusChangeListener(this);
 		mEditText.setEnabled(false);
-
+		mEditText.clearFocus();
+		
 		mTextView = (TextView) findViewById(R.id.clientInfo);
+		
+		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 	}
-
+	
 	private void appendTextToServerInfo(String appendText)
 	{
 		StringBuilder builder = new StringBuilder();
@@ -78,6 +93,7 @@ public class ClientActivity extends Activity implements OnClickListener,
 					findViewById(R.id.sendToServer).setEnabled(false);
 					mEditText.setText("");
 					mEditText.setEnabled(false);
+					mEditText.clearFocus();
 				}
 				break;
 			case GlobalField.CLIENT_READ:
@@ -91,6 +107,7 @@ public class ClientActivity extends Activity implements OnClickListener,
 				findViewById(R.id.sendToServer).setEnabled(false);
 				mEditText.setText("");
 				mEditText.setEnabled(false);
+				mEditText.clearFocus();
 				break;
 			case GlobalField.CLIENT_CONNECTED_FAILED:
 				appendTextToServerInfo("Client Connect Failed : " + msg.arg1);
@@ -101,6 +118,7 @@ public class ClientActivity extends Activity implements OnClickListener,
 					findViewById(R.id.sendToServer).setEnabled(false);
 					mEditText.setText("");
 					mEditText.setEnabled(false);
+					mEditText.clearFocus();
 				}
 				break;
 			case GlobalField.CLIENT_CONNECTED_SUCCESSED:
@@ -144,6 +162,7 @@ public class ClientActivity extends Activity implements OnClickListener,
 				findViewById(R.id.sendToServer).setEnabled(false);
 				mEditText.setText("");
 				mEditText.setEnabled(false);
+				mEditText.clearFocus();
 			}
 			break;
 		}
@@ -160,6 +179,7 @@ public class ClientActivity extends Activity implements OnClickListener,
 			}
 
 			mEditText.setText("");
+			mEditText.clearFocus();
 			findViewById(R.id.sendToServer).setEnabled(false);
 			break;
 		}
@@ -170,6 +190,21 @@ public class ClientActivity extends Activity implements OnClickListener,
 	public boolean onEditorAction(TextView v, int actionId, KeyEvent event)
 	{
 		// TODO Auto-generated method stub
+		if(actionId == EditorInfo.IME_ACTION_SEND || actionId == EditorInfo.IME_ACTION_UNSPECIFIED)
+		{
+			String input = mEditText.getText().toString();
+			if (TextUtils.isEmpty(input))
+			{
+				return false;
+			}
+			
+			mEditText.setText("");
+			mEditText.clearFocus();
+			findViewById(R.id.sendToServer).setEnabled(false);
+			
+			return true;
+		}
+		
 		return false;
 	}
 
@@ -178,7 +213,6 @@ public class ClientActivity extends Activity implements OnClickListener,
 			int after)
 	{
 		// TODO Auto-generated method stub
-
 	}
 
 	@Override
@@ -209,6 +243,16 @@ public class ClientActivity extends Activity implements OnClickListener,
 		{
 			findViewById(R.id.sendToServer).setEnabled(true);
 		}
+	}
+
+	@Override
+	public void onFocusChange(View v, boolean hasFocus)
+	{
+		// TODO Auto-generated method stub
+		if(hasFocus)
+			mInputMethodManager.showSoftInput(mEditText, InputMethodManager.SHOW_FORCED);
+		else
+			mInputMethodManager.hideSoftInputFromWindow(v.getWindowToken(), 0);
 	}
 
 }
